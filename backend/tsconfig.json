@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": ".",         // raiz do projeto (inclui prisma.config.ts, que fica fora de src)
+    "outDir": "./dist",     // pasta onde o TS vai colocar o código compilado (.js)
+
+    // Environment Settings
+    "module": "commonjs",   // formato de import/export que o Node entende nativamente (require/module.exports)
+    "target": "esnext",     // versão do JavaScript gerado na saída
+    "lib": ["esnext"],      // quais APIs de JS o TS reconhece (Promise, Array.map, etc.)
+    "types": ["node"],      // inclui os tipos globais do Node (process, Buffer, __dirname, etc.)
+
+    // Other Outputs
+    "sourceMap": true,        // gera .map, permite debugar o .ts direto mesmo rodando o .js compilado
+    "declaration": true,      // gera .d.ts com os tipos, útil se o código virar lib pra outro projeto
+    "declarationMap": true,   // gera mapa de origem pros arquivos .d.ts
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,   // acesso por índice (arr[0]) é tratado como "pode ser undefined"
+    "exactOptionalPropertyTypes": true, // diferencia campo opcional ausente de campo explicitamente undefined
+
+    // Recommended Options
+    "strict": true,             // ativa checagens rígidas de tipo
+    "isolatedModules": true,    // garante que cada arquivo compile sozinho, sem depender de outros pra tipos
+    "moduleDetection": "force", // trata todo arquivo como módulo, mesmo sem import nele
+    "skipLibCheck": true,       // não checa tipos dentro de node_modules (compila mais rápido)
+    "esModuleInterop": true     // permite "import express from 'express'" em libs não 100% ES Module
+  }
+}
