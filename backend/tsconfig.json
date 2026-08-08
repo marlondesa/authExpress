@@ -20,7 +20,7 @@
     "exactOptionalPropertyTypes": true, // diferencia campo opcional ausente de campo explicitamente undefined
 
     // Recommended Options
-    "strict": true,             // ativa checagens rígidas de tipo
+    "strict": true,             // ativa checagens rígidas de tipo // MEU PROFESSOR EM TEMPO REAL
     "isolatedModules": true,    // garante que cada arquivo compile sozinho, sem depender de outros pra tipos
     "moduleDetection": "force", // trata todo arquivo como módulo, mesmo sem import nele
     "skipLibCheck": true,       // não checa tipos dentro de node_modules (compila mais rápido)
