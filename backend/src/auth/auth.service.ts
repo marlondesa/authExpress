@@ -30,21 +30,94 @@ function createRefreshToken(userId: string) {
   return jwt.sign(
     { userId },
     getJwtSecret("JWT_REFRESH_SECRET", process.env.JWT_SECRET),
-    { expiresIn: "7d" }
+    { expiresIn: "7d", jwtid: crypto.randomUUID() }
   );
 }
 
 function verifyRefreshToken(token: string) {
-  const payload = jwt.verify(
-    token,
-    getJwtSecret("JWT_REFRESH_SECRET", process.env.JWT_SECRET)
-  );
+  try {
+    const payload = jwt.verify(
+      token,
+      getJwtSecret("JWT_REFRESH_SECRET", process.env.JWT_SECRET)
+    );
 
-  if (typeof payload !== "object" || payload === null || typeof payload.userId !== "string") {
-    throw new Error("Refresh token inválido.");
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof payload.userId !== "string"
+    ) {
+      throw new Error("Refresh token inválido ou expirado.");
+    }
+
+    return payload.userId;
+  } catch (_error) {
+    throw new Error("Refresh token inválido ou expirado.");
+  }
+}
+
+export async function refreshToken(token: string) {
+  const userId = verifyRefreshToken(token);
+  const tokenHash = hashToken(token);
+  const storedToken = await authRepository.findRefreshToken(tokenHash);
+
+  if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+    throw new Error("Refresh token inválido ou expirado.");
   }
 
-  return payload.userId;
+  await authRepository.revokeRefreshToken(tokenHash);
+
+  const accessToken = createAccessToken(userId);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  let newRefreshToken: string | undefined;
+  let newRefreshTokenHash: string | undefined;
+  const maxAttempts = 5;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const candidateRefreshToken = createRefreshToken(userId);
+    const candidateHash = hashToken(candidateRefreshToken);
+
+    try {
+      await authRepository.createRefreshToken({
+        token: candidateHash,
+        userId,
+        expiresAt,
+      });
+      newRefreshToken = candidateRefreshToken;
+      newRefreshTokenHash = candidateHash;
+      break;
+    } catch (error: unknown) {
+      const prismaError = error as {
+        code?: string;
+        meta?: { modelName?: string };
+        message?: string;
+      };
+
+      console.error("Refresh token create error", {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+      });
+
+      if (
+        prismaError.code === "P2002" &&
+        prismaError.meta?.modelName === "RefreshToken"
+      ) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (!newRefreshToken || !newRefreshTokenHash) {
+    throw new Error("Não foi possível gerar refresh token.");
+  }
+
+  return {
+    accessToken,
+    refreshToken: newRefreshToken,
+  };
 }
 
 async function sendPasswordResetEmail(email: string, resetToken: string) {
@@ -141,34 +214,6 @@ export async function login(data: {
     },
     accessToken,
     refreshToken,
-  };
-}
-
-export async function refreshToken(token: string) {
-  const userId = verifyRefreshToken(token);
-  const tokenHash = hashToken(token);
-  const storedToken = await authRepository.findRefreshToken(tokenHash);
-
-  if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
-    throw new Error("Refresh token inválido ou expirado.");
-  }
-
-  await authRepository.revokeRefreshToken(tokenHash);
-
-  const accessToken = createAccessToken(userId);
-  const newRefreshToken = createRefreshToken(userId);
-  const newRefreshTokenHash = hashToken(newRefreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  await authRepository.createRefreshToken({
-    token: newRefreshTokenHash,
-    userId,
-    expiresAt,
-  });
-
-  return {
-    accessToken,
-    refreshToken: newRefreshToken,
   };
 }
 

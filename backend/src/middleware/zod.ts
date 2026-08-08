@@ -6,7 +6,7 @@ export const validate = (schema: ZodSchema) => {
     const parseResult = schema.safeParse(req.body);
 
     if (!parseResult.success) {
-      return res.status(400).json({ errors: parseResult.error.errors });
+      return res.status(400).json({ errors: parseResult.error.issues });
     }
 
     req.body = parseResult.data;
