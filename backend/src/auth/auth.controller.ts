@@ -67,6 +67,14 @@ export async function refreshToken(
 
     const result = await authService.refreshToken(refreshToken);
 
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
     return res.status(200).json({ accessToken: result.accessToken });
   } catch (error) {
     next(error);
@@ -79,6 +87,12 @@ export async function logout(
   next: NextFunction
 ) {
   try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (refreshToken) {
+      await authService.logout(refreshToken);
+    }
+
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -87,6 +101,38 @@ export async function logout(
     });
 
     return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function forgotPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { email } = req.body;
+
+    await authService.forgotPassword(email);
+
+    return res.status(200).json({ message: "Se o e-mail existir, enviaremos instruções de redefinição." });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { token, password } = req.body;
+
+    await authService.resetPassword({ token, password });
+
+    return res.status(200).json({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     next(error);
   }

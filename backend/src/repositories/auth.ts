@@ -73,13 +73,91 @@ export async function deleteUser(id: string) {
             id,
         }
     })
-
 }
 
-export const  authRepository = {
+export async function createRefreshToken(data: {
+    token: string;
+    userId: string;
+    expiresAt: Date;
+}) {
+    return prisma.refreshToken.create({
+        data,
+    });
+}
+
+export async function findRefreshToken(token: string) {
+    return prisma.refreshToken.findUnique({
+        where: {
+            token,
+        },
+    });
+}
+
+export async function revokeRefreshToken(token: string) {
+    return prisma.refreshToken.updateMany({
+        where: {
+            token,
+            revoked: false,
+        },
+        data: {
+            revoked: true,
+        },
+    });
+}
+
+export async function revokeRefreshTokensByUserId(userId: string) {
+    return prisma.refreshToken.updateMany({
+        where: {
+            userId,
+            revoked: false,
+        },
+        data: {
+            revoked: true,
+        },
+    });
+}
+
+export async function createPasswordResetToken(data: {
+    token: string;
+    userId: string;
+    expiresAt: Date;
+}) {
+    return prisma.passwordResetToken.create({
+        data,
+    });
+}
+
+export async function findPasswordResetToken(token: string) {
+    return prisma.passwordResetToken.findUnique({
+        where: {
+            token,
+        },
+    });
+}
+
+export async function markPasswordResetTokenUsed(token: string) {
+    return prisma.passwordResetToken.updateMany({
+        where: {
+            token,
+            used: false,
+        },
+        data: {
+            used: true,
+        },
+    });
+}
+
+export const authRepository = {
     createUser,
     findUserByEmail,
     findUserById,
     updateUser,
     deleteUser,
+    createRefreshToken,
+    findRefreshToken,
+    revokeRefreshToken,
+    revokeRefreshTokensByUserId,
+    createPasswordResetToken,
+    findPasswordResetToken,
+    markPasswordResetTokenUsed,
 }
