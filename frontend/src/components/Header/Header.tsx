@@ -1,9 +1,11 @@
+import './Header.css';
+
 function Header() {
-    return (
-        <header>
-            <h1>Cabeçalho</h1>
-        </header>
-    );
+  return (
+    <header className="header">
+      Parte de cima
+    </header>
+  );
 }
 
 export default Header;

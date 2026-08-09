@@ -1,0 +1,16 @@
+
+
+/* Resposavel pela estilização do
+ componente App, garantindo que ele
+  ocupe toda a altura da tela e organize 
+  seus elementos de forma flexível. */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}

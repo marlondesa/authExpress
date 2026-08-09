@@ -168,7 +168,7 @@ export async function register(data: {
     throw new Error("Email já cadastrado");
   }
 
-  const passwordHash = await argon2.hash(data.password);
+  const passwordHash = await argon2.hash(data.password); 
 
   const user = await authRepository.createUser({
     name: data.name,
