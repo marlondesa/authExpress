@@ -1,5 +1,5 @@
 import api from "./Api";
-
+ 
 // LOGIN 
 const auth = {
     login: async (email: string, password: string) => {

@@ -1,9 +1,16 @@
-import './Header.css';
+
+import AuthButtons from "../auth/AuthButtons";
+import "./Header.css";
 
 function Header() {
   return (
     <header className="header">
-      Parte de cima
+      <AuthButtons />
+
+
+
+
+      
     </header>
   );
 }

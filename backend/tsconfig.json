@@ -8,7 +8,6 @@
     "module": "commonjs",   // formato de import/export que o Node entende nativamente (require/module.exports)
     "target": "esnext",     // versão do JavaScript gerado na saída
     "lib": ["esnext"],      // quais APIs de JS o TS reconhece (Promise, Array.map, etc.)
-    "types": ["node"],      // inclui os tipos globais do Node (process, Buffer, __dirname, etc.)
 
     // Other Outputs
     "sourceMap": true,        // gera .map, permite debugar o .ts direto mesmo rodando o .js compilado

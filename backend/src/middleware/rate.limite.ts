@@ -12,6 +12,9 @@ export const authRateLimiter = rateLimit({
 });
 
 
+
+
+
 //Essa aqui não esta sendo usada, mas é uma boa
 //  prática ter um rate limiter geral para todas as
 //  rotas da API, caso o authRateLimiter não seja suficiente.
