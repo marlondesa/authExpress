@@ -7,8 +7,19 @@ import {
   forgotPassword,
   resetPassword,
 } from "./auth.controller";
+
 import { validate } from "../middleware/zod";
-import { authRateLimiter } from "../middleware/rate.limite";
+
+import {
+  loginRateLimiter,
+  registerRateLimiter,
+  forgotPasswordRateLimiter,
+  resetPasswordRateLimiter,
+  refreshRateLimiter,
+  generalRateLimiter,
+
+
+} from "../middleware/rate.limite";
 import {
   loginSchema,
   registerSchema,
@@ -18,11 +29,11 @@ import {
 
 const router = Router();
 
-router.post("/register", authRateLimiter, validate(registerSchema), register);
-router.post("/login", authRateLimiter, validate(loginSchema), login);
-router.post("/refresh-token", authRateLimiter, refreshToken);
-router.post("/logout", authRateLimiter, logout);
-router.post("/forgot-password", authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
-router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), resetPassword);
+router.post("/login", loginRateLimiter, validate(loginSchema), login);
+router.post("/register", registerRateLimiter, validate(registerSchema), register);
+router.post("/refresh-token", refreshRateLimiter, refreshToken);
+router.post("/logout", generalRateLimiter, logout);
+router.post("/forgot-password", forgotPasswordRateLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post("/reset-password", resetPasswordRateLimiter, validate(resetPasswordSchema), resetPassword);
 
 export default router;

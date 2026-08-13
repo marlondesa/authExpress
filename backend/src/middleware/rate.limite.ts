@@ -1,31 +1,63 @@
 import rateLimit from "express-rate-limit";
 
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const fifteenMinutes = 15 * 60 * 1000;
 
-  max: 10,
+export const loginRateLimiter = rateLimit({
+  windowMs: fifteenMinutes,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Muitas requisições. Tente novamente em alguns minutos.",
+    error: "Muitas tentativas. Tente novamente mais tarde.",
   },
 });
 
+export const registerRateLimiter = rateLimit({
+  windowMs: fifteenMinutes,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Muitas requisições. Tente novamente mais tarde.",
+  },
+});
 
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Muitas solicitações. Tente novamente mais tarde.",
+  },
+});
 
+export const resetPasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Muitas tentativas. Tente novamente mais tarde.",
+  },
+});
 
-
-//Essa aqui não esta sendo usada, mas é uma boa
-//  prática ter um rate limiter geral para todas as
-//  rotas da API, caso o authRateLimiter não seja suficiente.
+export const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Muitas requisições. Tente novamente mais tarde.",
+  },
+});
 
 export const generalRateLimiter = rateLimit({
-
-  windowMs: 15 * 60 * 1000, 
+  windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Muitas requisições. Tente novamente em alguns minutos.",
+    error: "Muitas requisições. Tente novamente mais tarde.",
   },
-})
+});

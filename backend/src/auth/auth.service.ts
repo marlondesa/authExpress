@@ -1,136 +1,105 @@
 import argon2 from "argon2";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import jwt, { JwtPayload } from "jsonwebtoken";
+
 import { authRepository } from "../repositories/index";
-import jwt from "jsonwebtoken";
 
-function getJwtSecret(name: string, fallback?: string): string {
-  const secret = process.env[name] || fallback;
+const ACCESS_TOKEN_EXPIRES_IN = "15m";
+const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_EXPIRES_MS = 15 * 60 * 1000;
 
-  if (!secret) {
-    throw new Error(`JWT secret ${name} não encontrado.`);
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Variável de ambiente ${name} não configurada.`);
   }
 
-  return secret;
+  return value;
 }
 
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+function getJwtSecret(name: string): string {
+  return getRequiredEnv(name);
 }
 
-function createAccessToken(userId: string) {
+function hashToken(token: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+}
+
+function createRandomToken(): string {
+  return crypto.randomBytes(48).toString("hex");
+}
+
+function createAccessToken(userId: string): string {
   return jwt.sign(
-    { userId },
-    getJwtSecret("JWT_ACCESS_SECRET", process.env.JWT_SECRET),
-    { expiresIn: "15m" }
+    {
+      userId,
+      type: "access",
+    },
+    getJwtSecret("JWT_ACCESS_SECRET"),
+    {
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    }
   );
 }
 
-function createRefreshToken(userId: string) {
+function createRefreshToken(userId: string): string {
   return jwt.sign(
-    { userId },
-    getJwtSecret("JWT_REFRESH_SECRET", process.env.JWT_SECRET),
-    { expiresIn: "7d", jwtid: crypto.randomUUID() }
+    {
+      userId,
+      type: "refresh",
+    },
+    getJwtSecret("JWT_REFRESH_SECRET"),
+    {
+      expiresIn: "7d",
+      jwtid: crypto.randomUUID(),
+    }
   );
 }
 
-function verifyRefreshToken(token: string) {
+function verifyRefreshToken(token: string): string {
   try {
     const payload = jwt.verify(
       token,
-      getJwtSecret("JWT_REFRESH_SECRET", process.env.JWT_SECRET)
+      getJwtSecret("JWT_REFRESH_SECRET")
     );
 
     if (
       typeof payload !== "object" ||
       payload === null ||
-      typeof payload.userId !== "string"
+      typeof (payload as JwtPayload).userId !== "string" ||
+      (payload as JwtPayload).type !== "refresh"
     ) {
-      throw new Error("Refresh token inválido ou expirado.");
+      throw new Error();
     }
 
-    return payload.userId;
-  } catch (_error) {
+    return (payload as JwtPayload & {
+      userId: string;
+      type: string;
+    }).userId;
+  } catch {
     throw new Error("Refresh token inválido ou expirado.");
   }
 }
 
-export async function refreshToken(token: string) {
-  const userId = verifyRefreshToken(token);
-  const tokenHash = hashToken(token);
-  const storedToken = await authRepository.findRefreshToken(tokenHash);
+async function sendPasswordResetEmail(
+  email: string,
+  resetToken: string
+): Promise<void> {
+  const host = getRequiredEnv("SMTP_HOST");
+  const user = getRequiredEnv("SMTP_USER");
+  const pass = getRequiredEnv("SMTP_PASS");
+  const from = getRequiredEnv("SMTP_FROM");
+  const frontendUrl = getRequiredEnv("FRONTEND_URL");
 
-  if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
-    throw new Error("Refresh token inválido ou expirado.");
-  }
-
-  await authRepository.revokeRefreshToken(tokenHash);
-
-  const accessToken = createAccessToken(userId);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  let newRefreshToken: string | undefined;
-  let newRefreshTokenHash: string | undefined;
-  const maxAttempts = 5;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const candidateRefreshToken = createRefreshToken(userId);
-    const candidateHash = hashToken(candidateRefreshToken);
-
-    try {
-      await authRepository.createRefreshToken({
-        token: candidateHash,
-        userId,
-        expiresAt,
-      });
-      newRefreshToken = candidateRefreshToken;
-      newRefreshTokenHash = candidateHash;
-      break;
-    } catch (error: unknown) {
-      const prismaError = error as {
-        code?: string;
-        meta?: { modelName?: string };
-        message?: string;
-      };
-
-      console.error("Refresh token create error", {
-        code: prismaError.code,
-        meta: prismaError.meta,
-        message: prismaError.message,
-      });
-
-      if (
-        prismaError.code === "P2002" &&
-        prismaError.meta?.modelName === "RefreshToken"
-      ) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  if (!newRefreshToken || !newRefreshTokenHash) {
-    throw new Error("Não foi possível gerar refresh token.");
-  }
-
-  return {
-    accessToken,
-    refreshToken: newRefreshToken,
-  };
-}
-
-async function sendPasswordResetEmail(email: string, resetToken: string) {
-  const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  if (!host || !user || !pass) {
-    console.warn("SMTP não configurado. O e-mail de recuperação não será enviado.");
-    console.warn(`Reset password token: ${resetToken}`);
-    return;
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error("SMTP_PORT inválida.");
   }
 
   const transporter = nodemailer.createTransport({
@@ -143,18 +112,40 @@ async function sendPasswordResetEmail(email: string, resetToken: string) {
     },
   });
 
-  const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+  const resetLink =
+    `${frontendUrl.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(
+      resetToken
+    )}`;
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || `no-reply@${host}`,
+    from,
     to: email,
     subject: "Recuperação de senha",
-    html: `<p>Você solicitou a recuperação de senha.</p><p>Clique no link para redefinir sua senha:</p><p><a href="${resetLink}">${resetLink}</a></p>`,
-  });
-}
+    text: [
+      "Você solicitou a recuperação de senha.",
+      "",
+      `Acesse o link para redefinir sua senha: ${resetLink}`,
+      "",
+      "Este link expira em 15 minutos.",
+      "",
+      "Se você não solicitou essa recuperação, ignore este e-mail.",
+    ].join("\n"),
+    html: `
+      <p>Você solicitou a recuperação de senha.</p>
 
-function createRandomToken() {
-  return crypto.randomBytes(48).toString("hex");
+      <p>
+        <a href="${resetLink}">
+          Redefinir senha
+        </a>
+      </p>
+
+      <p>Este link expira em 15 minutos.</p>
+
+      <p>
+        Se você não solicitou essa recuperação, ignore este e-mail.
+      </p>
+    `,
+  });
 }
 
 export async function register(data: {
@@ -162,43 +153,81 @@ export async function register(data: {
   email: string;
   password: string;
 }) {
-  const userExists = await authRepository.findUserByEmail(data.email);
+  const email = data.email.trim().toLowerCase();
+  const name = data.name.trim();
 
-  if (userExists) {
-    throw new Error("Email já cadastrado");
+  if (!name || !email || !data.password) {
+    throw new Error("Dados inválidos.");
   }
 
-  const passwordHash = await argon2.hash(data.password); 
+  const userExists = await authRepository.findUserByEmail(email);
 
-  const user = await authRepository.createUser({
-    name: data.name,
-    email: data.email,
-    password: passwordHash,
+  if (userExists) {
+    throw new Error("Email já cadastrado.");
+  }
+
+  const passwordHash = await argon2.hash(data.password, {
+    type: argon2.argon2id,
   });
 
-  return user;
+  try {
+    const user = await authRepository.createUser({
+      name,
+      email,
+      password: passwordHash,
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
+  } catch (error: unknown) {
+    const prismaError = error as {
+      code?: string;
+    };
+
+    if (prismaError.code === "P2002") {
+      throw new Error("Email já cadastrado.");
+    }
+
+    throw error;
+  }
 }
 
 export async function login(data: {
   email: string;
   password: string;
 }) {
-  const user = await authRepository.findUserByEmail(data.email);
+  const email = data.email.trim().toLowerCase();
 
-  if (!user) {
-    throw new Error("Email ou senha inválidos");
+  if (!email || !data.password) {
+    throw new Error("Email ou senha inválidos.");
   }
 
-  const isPasswordValid = await argon2.verify(user.password, data.password);
+  const user = await authRepository.findUserByEmail(email);
+
+  if (!user) {
+    throw new Error("Email ou senha inválidos.");
+  }
+
+  const isPasswordValid = await argon2.verify(
+    user.password,
+    data.password
+  );
 
   if (!isPasswordValid) {
-    throw new Error("Email ou senha inválidos");
+    throw new Error("Email ou senha inválidos.");
   }
 
   const accessToken = createAccessToken(user.id);
+
   const refreshToken = createRefreshToken(user.id);
   const refreshTokenHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  const expiresAt = new Date(
+    Date.now() + REFRESH_TOKEN_EXPIRES_MS
+  );
 
   await authRepository.createRefreshToken({
     token: refreshTokenHash,
@@ -217,20 +246,115 @@ export async function login(data: {
   };
 }
 
-export async function logout(token: string) {
+export async function refreshToken(token: string) {
+  if (!token || typeof token !== "string") {
+    throw new Error("Refresh token inválido ou expirado.");
+  }
+
+  const userId = verifyRefreshToken(token);
   const tokenHash = hashToken(token);
+
+  /*
+   * IMPORTANTE:
+   * Esta operação precisa ser ATÔMICA no repository.
+   *
+   * Ela deve somente consumir o token se:
+   * - existir
+   * - não estiver revogado
+   * - não estiver expirado
+   *
+   * E deve retornar null se outra requisição já tiver consumido.
+   */
+  const consumedToken =
+    await authRepository.consumeRefreshToken(tokenHash);
+
+  if (!consumedToken) {
+    throw new Error("Refresh token inválido ou expirado.");
+  }
+
+  if (consumedToken.userId !== userId) {
+    throw new Error("Refresh token inválido ou expirado.");
+  }
+
+  const accessToken = createAccessToken(userId);
+
+  const newRefreshToken = createRefreshToken(userId);
+  const newRefreshTokenHash = hashToken(newRefreshToken);
+
+  const expiresAt = new Date(
+    Date.now() + REFRESH_TOKEN_EXPIRES_MS
+  );
+
+  try {
+    await authRepository.createRefreshToken({
+      token: newRefreshTokenHash,
+      userId,
+      expiresAt,
+    });
+  } catch (error: unknown) {
+    const prismaError = error as {
+      code?: string;
+    };
+
+    if (prismaError.code === "P2002") {
+      throw new Error("Não foi possível gerar refresh token.");
+    }
+
+    throw error;
+  }
+
+  return {
+    accessToken,
+    refreshToken: newRefreshToken,
+  };
+}
+
+export async function logout(token: string): Promise<void> {
+  if (!token || typeof token !== "string") {
+    return;
+  }
+
+  const tokenHash = hashToken(token);
+
   await authRepository.revokeRefreshToken(tokenHash);
 }
 
 export async function forgotPassword(email: string) {
-  const user = await authRepository.findUserByEmail(email);
-  if (!user) {
-    return;
+  const normalizedEmail = email.trim().toLowerCase();
+
+  /*
+   * A mensagem de resposta deve ser igual exista ou não
+   * uma conta com aquele e-mail.
+   */
+  const genericResponse = {
+    message:
+      "Se um usuário com este e-mail existir, um token será enviado.",
+  };
+
+  if (!normalizedEmail) {
+    return genericResponse;
   }
+
+  const user =
+    await authRepository.findUserByEmail(normalizedEmail);
+
+  if (!user) {
+    return genericResponse;
+  }
+
+  /*
+   * Uma nova solicitação invalida tokens anteriores.
+   */
+  await authRepository.revokePasswordResetTokensByUserId(
+    user.id
+  );
 
   const rawToken = createRandomToken();
   const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  const expiresAt = new Date(
+    Date.now() + PASSWORD_RESET_TOKEN_EXPIRES_MS
+  );
 
   await authRepository.createPasswordResetToken({
     token: tokenHash,
@@ -238,34 +362,78 @@ export async function forgotPassword(email: string) {
     expiresAt,
   });
 
-  await sendPasswordResetEmail(user.email, rawToken);
+  /*
+   * Nunca coloque rawToken em logs.
+   */
+  await sendPasswordResetEmail(
+    user.email,
+    rawToken
+  );
+
+  return genericResponse;
 }
 
 export async function resetPassword(data: {
   token: string;
   password: string;
 }) {
+  if (!data.token || !data.password) {
+    throw new Error(
+      "Token ou senha inválidos."
+    );
+  }
+
+  /*
+   * A validação de tamanho/complexidade da senha
+   * deve ser feita também no controller/schema.
+   */
+
   const tokenHash = hashToken(data.token);
-  const storedToken = await authRepository.findPasswordResetToken(tokenHash);
 
-  if (!storedToken || storedToken.used || storedToken.expiresAt < new Date()) {
-    throw new Error("Token de recuperação inválido ou expirado.");
+  /*
+   * Esta operação precisa ser ATÔMICA.
+   *
+   * O token só pode ser consumido uma vez.
+   */
+  const resetToken =
+    await authRepository.consumePasswordResetToken(
+      tokenHash
+    );
+
+  if (!resetToken) {
+    throw new Error(
+      "Token de recuperação inválido ou expirado."
+    );
   }
 
-  const user = await authRepository.findUserById(storedToken.userId);
+  const user =
+    await authRepository.findUserById(
+      resetToken.userId
+    );
+
   if (!user) {
-    throw new Error("Usuário não encontrado.");
+    throw new Error(
+      "Token de recuperação inválido ou expirado."
+    );
   }
 
-  const passwordHash = await argon2.hash(data.password);
+  const passwordHash = await argon2.hash(
+    data.password,
+    {
+      type: argon2.argon2id,
+    }
+  );
 
-  await authRepository.updateUser(user.id, { password: passwordHash });
-  await authRepository.markPasswordResetTokenUsed(tokenHash);
-  await authRepository.revokeRefreshTokensByUserId(user.id);
+  /*
+   * Idealmente updateUser + revogação dos refresh tokens
+   * devem acontecer em uma transação no repository.
+   */
+  await authRepository.updatePasswordAndRevokeSessions(
+    user.id,
+    passwordHash
+  );
+
+  return {
+    message: "Senha alterada com sucesso.",
+  };
 }
-
-
-
-
-
-

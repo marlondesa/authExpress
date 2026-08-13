@@ -86,3 +86,4 @@ function RegisterModal({ onClose }: RegisterModalProps) {
 }
 
 export default RegisterModal;
+
