@@ -19,6 +19,7 @@ model User {
   updatedAt  DateTime @updatedAt
 }
 
+
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique

@@ -1,27 +1,39 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import auth from "../../../service/Auth";
-import "./LoginModal.css";
+import "../Modal.css"
+
+
 
 type LoginModalProps = {
-  onClose?: () => void;
+  onRegister: () => void;
+  onForgotPassword: () => void;
 };
 
-function LoginModal({ onClose }: LoginModalProps) {
+function LoginModal({
+  // onClose,
+  onRegister,
+  onForgotPassword,
+}: LoginModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
+
     setError("");
     setSuccess(false);
     setLoading(true);
 
     try {
       await auth.login(email, password);
+
       setSuccess(true);
+
       setEmail("");
       setPassword("");
     } catch (err) {
@@ -37,17 +49,19 @@ function LoginModal({ onClose }: LoginModalProps) {
 
   return (
     <div className="login-modal">
-      {onClose && (
-        <button type="button" onClick={onClose} className="login-modal__close">
-          Fechar
-        </button>
-      )}
-
-      <form className="login-modal__form" onSubmit={handleLogin} noValidate>
-        <h2 className="login-modal__title">Entrar</h2>
+      <form
+        className="login-modal__form"
+        onSubmit={handleLogin}
+        noValidate
+      >
+        <h2 className="login-modal__title">
+          Entrar
+        </h2>
 
         {error && (
-          <p className="login-modal__alert login-modal__alert--error">{error}</p>
+          <p className="login-modal__alert login-modal__alert--error">
+            {error}
+          </p>
         )}
 
         {success && (
@@ -56,9 +70,13 @@ function LoginModal({ onClose }: LoginModalProps) {
           </p>
         )}
 
-        <label className="login-modal__label" htmlFor="login-email">
+        <label
+          className="login-modal__label"
+          htmlFor="login-email"
+        >
           E-mail
         </label>
+
         <input
           id="login-email"
           type="email"
@@ -69,9 +87,13 @@ function LoginModal({ onClose }: LoginModalProps) {
           required
         />
 
-        <label className="login-modal__label" htmlFor="login-password">
+        <label
+          className="login-modal__label"
+          htmlFor="login-password"
+        >
           Senha
         </label>
+
         <input
           id="login-password"
           type="password"
@@ -83,8 +105,28 @@ function LoginModal({ onClose }: LoginModalProps) {
           required
         />
 
-        <button className="login-modal__button" type="submit" disabled={loading}>
+        <button
+          className="login-modal__button"
+          type="submit"
+          disabled={loading}
+        >
           {loading ? "Entrando..." : "Entrar"}
+        </button>
+
+        <button
+          type="button"
+          className="login-modal__link"
+          onClick={onForgotPassword}
+        >
+          Esqueci minha senha
+        </button>
+
+        <button
+          type="button"
+          className="login-modal__link"
+          onClick={onRegister}
+        >
+          Criar uma conta
         </button>
       </form>
     </div>

@@ -1,0 +1,223 @@
+/* =========================================
+   CONTAINER DOS MODAIS
+   ========================================= */
+
+.login-modal,
+.register-modal,
+.forgot-password-modal {
+  width: 100%;
+}
+
+
+/* =========================================
+   FORMULÁRIOS
+   ========================================= */
+
+.login-modal__form,
+.register-modal__form,
+.forgot-password-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+
+/* =========================================
+   TÍTULOS
+   ========================================= */
+
+.login-modal__title,
+.register-modal__title,
+.forgot-password-modal__title {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+
+/* =========================================
+   LABELS
+   ========================================= */
+
+.login-modal__label,
+.register-modal__label,
+.forgot-password-modal__label {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* =========================================
+   INPUTS
+   ========================================= */
+
+.login-modal__input,
+.register-modal__input,
+.forgot-password-modal__input,
+.register-modal__form input {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* PLACEHOLDER */
+.login-modal__input::placeholder,
+.register-modal__form input::placeholder,
+.forgot-password-modal__input::placeholder {
+  color: var(--text-muted);
+}
+
+/* FOCO */
+.login-modal__input:focus-visible,
+.register-modal__form input:focus-visible,
+.forgot-password-modal__input:focus-visible {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+
+/* =========================================
+   BOTÕES PRINCIPAIS
+   ========================================= */
+
+.login-modal__button,
+.register-modal__form button[type="submit"],
+.forgot-password-modal__button {
+  width: 100%;
+  height: 44px;
+  margin-top: 6px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+/* HOVER */
+.login-modal__button:hover:not(:disabled),
+.register-modal__form button[type="submit"]:hover:not(:disabled),
+.forgot-password-modal__button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+/* ACTIVE */
+.login-modal__button:active:not(:disabled),
+.register-modal__form button[type="submit"]:active:not(:disabled),
+.forgot-password-modal__button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* DESABILITADO */
+.login-modal__button:disabled,
+.register-modal__form button[type="submit"]:disabled,
+.forgot-password-modal__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================
+   LINKS / BOTÕES SECUNDÁRIOS
+   ========================================= */
+
+.login-modal__link,
+.register-modal__login,
+.forgot-password-modal__login {
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    text-decoration 0.2s ease;
+}
+
+/* HOVER */
+.login-modal__link:hover,
+.register-modal__login:hover,
+.forgot-password-modal__login:hover {
+  color: var(--secondary-hover);
+  text-decoration: underline;
+}
+
+
+/* =========================================
+   ALERTAS
+   ========================================= */
+
+.login-modal__alert,
+.register-modal__alert,
+.forgot-password-modal__alert {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ERRO */
+.login-modal__alert--error,
+.register-modal__alert--error,
+.forgot-password-modal__alert--error {
+  border: 1px solid var(--error-border);
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+/* SUCESSO */
+.login-modal__alert--success,
+.register-modal__alert--success,
+.forgot-password-modal__alert--success {
+  border: 1px solid var(--success-border);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 480px) {
+  .login-modal__title,
+  .register-modal__title,
+  .forgot-password-modal__title {
+    font-size: 23px;
+  }
+
+  .login-modal__input,
+  .register-modal__form input,
+  .forgot-password-modal__input,
+  .login-modal__button,
+  .register-modal__form button[type="submit"],
+  .forgot-password-modal__button {
+    height: 42px;
+  }
+}

@@ -1,16 +1,21 @@
 
 import AuthButtons from "../auth/AuthButtons";
+
+
+
+//cores 
 import "./Header.css";
+import "../../styles/Global.css"
+
+
+
 
 function Header() {
   return (
     <header className="header">
-      <AuthButtons />
-
-
-
-
-      
+      <div className="auth">
+        <AuthButtons />
+      </div>
     </header>
   );
 }

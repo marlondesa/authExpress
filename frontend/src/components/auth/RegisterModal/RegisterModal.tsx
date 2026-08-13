@@ -1,12 +1,18 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import auth from "../../../service/Auth";
-import "./RegisterModal.css";
+import "../Modal.css"
+
+
 
 type RegisterModalProps = {
-  onClose?: () => void;
+
+  onLogin: () => void;
 };
 
-function RegisterModal({ onClose }: RegisterModalProps) {
+function RegisterModal({
+  
+  onLogin,
+}: RegisterModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,16 +20,20 @@ function RegisterModal({ onClose }: RegisterModalProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
-  async function handleRegister(event: FormEvent<HTMLFormElement>) {
+  async function handleRegister(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
+
     setError("");
     setSuccess("");
-
     setLoading(true);
 
     try {
       await auth.register(name, email, password);
+
       setSuccess("Cadastro realizado com sucesso!");
+
       setName("");
       setEmail("");
       setPassword("");
@@ -40,16 +50,21 @@ function RegisterModal({ onClose }: RegisterModalProps) {
 
   return (
     <div className="register-modal">
-      {onClose && (
-        <button type="button" onClick={onClose} className="register-modal__close">
-          Fechar
-        </button>
-      )}
+      <form
+        className="register-modal__form"
+        onSubmit={handleRegister}
+        noValidate
+      >
+        <h2 className="register-modal__title">
+          Cadastrar
+        </h2>
 
-      <form className="register-modal__form" onSubmit={handleRegister} noValidate>
-        <h2 className="register-modal__title">Cadastrar</h2>
+        {error && (
+          <p className="register-modal__alert register-modal__alert--error">
+            {error}
+          </p>
+        )}
 
-        {error && <p className="register-modal__alert register-modal__alert--error">{error}</p>}
         {success && (
           <p className="register-modal__alert register-modal__alert--success">
             {success}
@@ -59,26 +74,41 @@ function RegisterModal({ onClose }: RegisterModalProps) {
         <input
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(event) => setName(event.target.value)}
           placeholder="Nome"
+          required
         />
 
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(event) => setEmail(event.target.value)}
           placeholder="Email"
+          required
         />
 
         <input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(event) => setPassword(event.target.value)}
           placeholder="Senha"
+          minLength={8}
+          required
         />
 
-        <button type="submit" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+        >
           {loading ? "Cadastrando..." : "Cadastrar"}
+        </button>
+
+        <button
+          type="button"
+          className="register-modal__login"
+          onClick={onLogin}
+        >
+          Já tenho uma conta
         </button>
       </form>
     </div>
@@ -86,4 +116,3 @@ function RegisterModal({ onClose }: RegisterModalProps) {
 }
 
 export default RegisterModal;
-
