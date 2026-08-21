@@ -23,6 +23,7 @@
     "isolatedModules": true,    // garante que cada arquivo compile sozinho, sem depender de outros pra tipos
     "moduleDetection": "force", // trata todo arquivo como módulo, mesmo sem import nele
     "skipLibCheck": true,       // não checa tipos dentro de node_modules (compila mais rápido)
-    "esModuleInterop": true     // permite "import express from 'express'" em libs não 100% ES Module
+    "esModuleInterop": true,   // permite "import express from 'express'" em libs não 100% ES Module
+    "typeRoots": ["./node_modules/@types", "./node_modules"] // ensure TypeScript finds type declarations for installed packages
   }
 }
