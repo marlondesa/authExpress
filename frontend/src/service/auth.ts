@@ -2,8 +2,9 @@ import api from "./Api";
  
 // LOGIN 
 const auth = {
-    login: async (email: string, password: string) => {
-        const response = await api.post("/auth/login", { email, password });
+    // Login now requires captchaAnswer to be sent to the backend for validation.
+    login: async (email: string, password: string, captchaAnswer: string) => {
+        const response = await api.post("/auth/login", { email, password, captchaAnswer });
         return response.data;
     },
 
@@ -14,8 +15,21 @@ const auth = {
     },
 
     // REGISTER
-    register: async (name: string, email: string, password: string) => {
-        const response = await api.post("/auth/register", { name, email, password });
+    // Register now also sends confirmPassword for server‑side validation.
+    register: async (
+        name: string,
+        email: string,
+        password: string,
+        confirmPassword: string,
+        captchaAnswer: string
+    ) => {
+        const response = await api.post("/auth/register", {
+            name,
+            email,
+            password,
+            confirmPassword,
+            captchaAnswer,
+        });
         return response.data;
     },
 
@@ -47,6 +61,13 @@ const auth = {
     deleteUser: async (id: string) => {
         const response = await api.delete(`/auth/users/${id}`);
         return response.data;
+    },
+
+    // GET MATH CAPTCHA IMAGE (data‑uri)
+    getMathCaptcha: async () => {
+        const response = await api.get("/math-captcha");
+        // Expected response: { image: string }
+        return response.data.image as string;
     },
 };
 

@@ -1,10 +1,7 @@
 import { useState } from "react";
-
 import LoginModal from "./LoginModal/LoginModal";
 import RegisterModal from "./RegisterModal/RegisterModal";
 import ForgotPasswordModal from "./ForgotPasswordModal/ForgotPasswordModal";
-
-import "../../styles/Global.css"
 import "./AuthButtons.css";
 
 type AuthOption = "login" | "register" | "forgot";

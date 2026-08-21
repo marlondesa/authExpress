@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import auth from "../../../service/Auth";
-import "../Modal.css"
+import "./LoginModal.css";
+
 
 
 
@@ -16,9 +18,27 @@ function LoginModal({
 }: LoginModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  // Recebe a imagem (data‑uri) do captcha gerada no backend
+  const [captchaImage, setCaptchaImage] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Load captcha question when the modal mounts
+  useEffect(() => {
+    const loadCaptcha = async () => {
+      try {
+        const image = await auth.getMathCaptcha();
+        setCaptchaImage(image);
+      } catch (_) {
+        // If captcha fails to load we still allow login (backend will reject without answer)
+        setCaptchaImage("");
+      }
+    };
+    loadCaptcha();
+  }, []);
 
   async function handleLogin(
     event: React.FormEvent<HTMLFormElement>
@@ -30,12 +50,13 @@ function LoginModal({
     setLoading(true);
 
     try {
-      await auth.login(email, password);
+      await auth.login(email, password, captchaAnswer);
 
       setSuccess(true);
 
       setEmail("");
       setPassword("");
+      setCaptchaAnswer("");
     } catch (err) {
       setError(
         err instanceof Error
@@ -94,16 +115,44 @@ function LoginModal({
           Senha
         </label>
 
-        <input
-          id="login-password"
-          type="password"
-          className="login-modal__input"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="••••••••"
-          minLength={8}
-          required
-        />
+        <div className="password-field">
+          <input
+            id="login-password"
+            type={showPassword ? "text" : "password"}
+            className="login-modal__input"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="••••••••"
+            minLength={8}
+            required
+          />
+          <button
+            type="button"
+            className="show-password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+
+        {captchaImage && (
+          <div className="login-modal__captcha">
+            <img src={captchaImage} alt="captcha" className="login-modal__captcha-image" />
+            <label className="login-modal__label" htmlFor="captcha-answer">
+              Digite o resultado da operação
+            </label>
+            <input
+              id="captcha-answer"
+              type="text"
+              className="login-modal__input"
+              value={captchaAnswer}
+              onChange={(e) => setCaptchaAnswer(e.target.value)}
+              placeholder="Resposta"
+              required
+            />
+          </div>
+        )}
 
         <button
           className="login-modal__button"

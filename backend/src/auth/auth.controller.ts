@@ -37,8 +37,10 @@ export async function register(
   next: NextFunction
 ) {
   try {
-    const { name, email, password } = req.body;
+    // `confirmPassword` is validated by Zod schema before this handler runs.
+    const { name, email, password, confirmPassword } = req.body;
 
+    // The service only needs the original fields; confirmPassword is ignored.
     const user = await authService.register({ name, email, password });
 
     return res.status(201).json({

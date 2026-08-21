@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import auth from "../../../service/Auth";
-import "../Modal.css"
+import "../Modal.css";
+import "./RegisterModal.css";
 
 
 
@@ -16,9 +18,28 @@ function RegisterModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  // controla a visibilidade das senhas
+  const [showPassword, setShowPassword] = useState(false);
+  // Recebe a imagem (data‑uri) do captcha gerada no backend
+  const [captchaImage, setCaptchaImage] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+
+  // Load captcha question when the modal mounts
+  useEffect(() => {
+    const loadCaptcha = async () => {
+      try {
+        const image = await auth.getMathCaptcha();
+        setCaptchaImage(image);
+      } catch (_) {
+        setCaptchaImage("");
+      }
+    };
+    loadCaptcha();
+  }, []);
 
   async function handleRegister(
     event: React.FormEvent<HTMLFormElement>
@@ -30,13 +51,20 @@ function RegisterModal({
     setLoading(true);
 
     try {
-      await auth.register(name, email, password);
+        // valida se as senhas coincidem antes de enviar ao backend
+        if (password !== confirmPassword) {
+          setError("As senhas não coincidem.");
+          setLoading(false);
+          return;
+        }
+        await auth.register(name, email, password, confirmPassword, captchaAnswer);
 
       setSuccess("Cadastro realizado com sucesso!");
 
       setName("");
       setEmail("");
       setPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setError(
         err instanceof Error
@@ -87,15 +115,60 @@ function RegisterModal({
           required
         />
 
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Senha"
-          minLength={8}
-          required
-        />
+        <div className="password-field">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Senha"
+            minLength={8}
+            required
+          />
+          <button
+            type="button"
+            className="show-password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+        <div className="password-field">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            placeholder="Confirmar Senha"
+            minLength={8}
+            required
+          />
+          <button
+            type="button"
+            className="show-password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
 
+        {captchaImage && (
+          <div className="register-modal__captcha">
+            <img src={captchaImage} alt="captcha" className="register-modal__captcha-image" />
+            <label className="register-modal__label" htmlFor="captcha-answer">
+              Digite o resultado da operação
+            </label>
+            <input
+              id="captcha-answer"
+              type="text"
+              className="register-modal__input"
+              value={captchaAnswer}
+              onChange={(e) => setCaptchaAnswer(e.target.value)}
+              placeholder="Resposta"
+              required
+            />
+          </div>
+        )}
         <button
           type="submit"
           disabled={loading}
