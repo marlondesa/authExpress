@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import auth from "../../../service/Auth";
+import auth, { getApiErrorMessage } from "../../../service/Auth";
 import "./LoginModal.css";
 
 
@@ -27,16 +27,17 @@ function LoginModal({
   const [success, setSuccess] = useState(false);
 
   // Load captcha question when the modal mounts
+  const loadCaptcha = async () => {
+    try {
+      const image = await auth.getMathCaptcha();
+      setCaptchaImage(image);
+    } catch (_) {
+      // If captcha fails to load we still allow login (backend will reject without answer)
+      setCaptchaImage("");
+    }
+  };
+
   useEffect(() => {
-    const loadCaptcha = async () => {
-      try {
-        const image = await auth.getMathCaptcha();
-        setCaptchaImage(image);
-      } catch (_) {
-        // If captcha fails to load we still allow login (backend will reject without answer)
-        setCaptchaImage("");
-      }
-    };
     loadCaptcha();
   }, []);
 
@@ -59,10 +60,16 @@ function LoginModal({
       setCaptchaAnswer("");
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível fazer login. Tente novamente."
+        getApiErrorMessage(
+          err,
+          "Não foi possível fazer login. Tente novamente."
+        )
       );
+
+      // O captcha é consumido pelo backend em qualquer falha:
+      // limpa o campo e carrega uma nova imagem para a próxima tentativa
+      setCaptchaAnswer("");
+      loadCaptcha();
     } finally {
       setLoading(false);
     }

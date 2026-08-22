@@ -1,5 +1,30 @@
 import api from "./Api";
- 
+import axios from "axios";
+
+/**
+ * Extrai a mensagem de erro amigável enviada pelo backend
+ * (`{ error: "..." }` ou `{ errors: [...] }` do Zod), em vez da
+ * mensagem genérica do axios ("Request failed with status code 403").
+ */
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+    if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+            | { error?: string; errors?: { message?: string }[] }
+            | undefined;
+
+        if (data?.error) return data.error;
+
+        // Erros de validação Zod chegam como array de issues
+        if (Array.isArray(data?.errors) && data.errors.length > 0) {
+            return data.errors[0]?.message ?? fallback;
+        }
+    }
+
+    return err instanceof Error && !axios.isAxiosError(err)
+        ? err.message
+        : fallback;
+}
+
 // LOGIN 
 const auth = {
     // Login now requires captchaAnswer to be sent to the backend for validation.

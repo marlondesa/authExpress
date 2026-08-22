@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import auth from "../../../service/Auth";
+import auth, { getApiErrorMessage } from "../../../service/Auth";
 import "./RegisterModal.css";
 
 
@@ -28,15 +28,16 @@ function RegisterModal({
   const [success, setSuccess] = useState("");
 
   // Load captcha question when the modal mounts
+  const loadCaptcha = async () => {
+    try {
+      const image = await auth.getMathCaptcha();
+      setCaptchaImage(image);
+    } catch (_) {
+      setCaptchaImage("");
+    }
+  };
+
   useEffect(() => {
-    const loadCaptcha = async () => {
-      try {
-        const image = await auth.getMathCaptcha();
-        setCaptchaImage(image);
-      } catch (_) {
-        setCaptchaImage("");
-      }
-    };
     loadCaptcha();
   }, []);
 
@@ -66,10 +67,15 @@ function RegisterModal({
       setConfirmPassword("");
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível realizar o cadastro. Tente novamente."
+        getApiErrorMessage(
+          err,
+          "Não foi possível realizar o cadastro. Tente novamente."
+        )
       );
+
+      // Captcha consumido pelo backend: limpa e recarrega a imagem
+      setCaptchaAnswer("");
+      loadCaptcha();
     } finally {
       setLoading(false);
     }

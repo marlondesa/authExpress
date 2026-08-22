@@ -1,5 +1,5 @@
 import { useState } from "react";
-import auth from "../../../service/Auth";
+import auth, { getApiErrorMessage } from "../../../service/Auth";
 import "./ForgotPasswordModal.css";
 
 
@@ -37,9 +37,10 @@ function ForgotPasswordModal({
       setEmail("");
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível enviar o e-mail de recuperação."
+        getApiErrorMessage(
+          err,
+          "Não foi possível enviar o e-mail de recuperação."
+        )
       );
     } finally {
       setLoading(false);
