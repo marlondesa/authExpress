@@ -6,6 +6,7 @@ import compression from "compression";
 import session from "express-session";
 
 import authRoutes from "../auth/auth.routes";
+import { AppError } from "../errors/AppError";
 import { requestLogger, errorLogger, logger } from "../middleware/logger";
 import { serveMathCaptcha } from "./mathCaptcha";
 
@@ -16,9 +17,17 @@ const app = express();
 app.use(helmet());
 
 // Sessão (memória – usar Redis ou outro store em produção)
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret || sessionSecret.length < 32) {
+  throw new Error(
+    "SESSION_SECRET não configurada ou fraca (mínimo 32 caracteres)."
+  );
+}
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET ?? "troca-por-um-segredo-forte",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -91,6 +100,13 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
+    // Erros de negócio conhecidos → status adequado, sem vazar stack
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+      });
+    }
+
     logger.error(err);
 
     res.status(500).json({

@@ -6,9 +6,11 @@ import {
   logout,
   forgotPassword,
   resetPassword,
+  me,
 } from "./auth.controller";
 
 import { validate } from "../middleware/zod";
+import { requireAuth } from "../middleware/requireAuth";
 
 import {
   loginRateLimiter,
@@ -36,5 +38,8 @@ router.post("/refresh-token", refreshRateLimiter, refreshToken);
 router.post("/logout", generalRateLimiter, logout);
 router.post("/forgot-password", forgotPasswordRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", resetPasswordRateLimiter, validate(resetPasswordSchema), resetPassword);
+
+// Rota protegida – exige Authorization: Bearer <accessToken>
+router.get("/me", generalRateLimiter, requireAuth, me);
 
 export default router;

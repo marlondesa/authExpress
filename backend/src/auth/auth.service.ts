@@ -4,11 +4,21 @@ import nodemailer from "nodemailer";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
 import { authRepository } from "../repositories/index";
+import { AppError } from "../errors/AppError";
 import { logger } from "../middleware/logger";
 
 const ACCESS_TOKEN_EXPIRES_IN = "15m";
 const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TOKEN_EXPIRES_MS = 15 * 60 * 1000;
+
+/*
+ * Hash Argon2id pré-computado, verificado quando o e-mail não existe.
+ * Garante que login de usuário inexistente leve o mesmo tempo que um
+ * login com senha errada — impede enumeração de contas por timing
+ * (ASVS 2.2.1 / OWASP Cheat Sheet: Authentication).
+ */
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,p=4,t=3$UGHeLgZC7pvrRh/fbvSlWA$gMcxODY7tI+or+O0X0MQaSXDcdKjMSuAkbMpiB4ZmCA";
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -83,7 +93,7 @@ function verifyRefreshToken(token: string): string {
       type: string;
     }).userId;
   } catch {
-    throw new Error("Refresh token inválido ou expirado.");
+    throw new AppError(401, "Refresh token inválido ou expirado.");
   }
 }
 
@@ -158,13 +168,13 @@ export async function register(data: {
   const name = data.name.trim();
 
   if (!name || !email || !data.password) {
-    throw new Error("Dados inválidos.");
+    throw new AppError(400, "Dados inválidos.");
   }
 
   const userExists = await authRepository.findUserByEmail(email);
 
   if (userExists) {
-    throw new Error("Email já cadastrado.");
+    throw new AppError(409, "Email já cadastrado.");
   }
 
   const passwordHash = await argon2.hash(data.password, {
@@ -189,7 +199,7 @@ export async function register(data: {
     };
 
     if (prismaError.code === "P2002") {
-      throw new Error("Email já cadastrado.");
+      throw new AppError(409, "Email já cadastrado.");
     }
 
     throw error;
@@ -203,22 +213,22 @@ export async function login(data: {
   const email = data.email.trim().toLowerCase();
 
   if (!email || !data.password) {
-    throw new Error("Email ou senha inválidos.");
+    throw new AppError(401, "Email ou senha inválidos.");
   }
 
   const user = await authRepository.findUserByEmail(email);
 
-  if (!user) {
-    throw new Error("Email ou senha inválidos.");
-  }
-
+  /*
+   * Verifica SEMPRE contra um hash — o real do usuário ou o dummy —
+   * para que o tempo de resposta não revele se o e-mail existe.
+   */
   const isPasswordValid = await argon2.verify(
-    user.password,
+    user ? user.password : DUMMY_PASSWORD_HASH,
     data.password
   );
 
-  if (!isPasswordValid) {
-    throw new Error("Email ou senha inválidos.");
+  if (!user || !isPasswordValid) {
+    throw new AppError(401, "Email ou senha inválidos.");
   }
 
   const accessToken = createAccessToken(user.id);
@@ -249,7 +259,7 @@ export async function login(data: {
 
 export async function refreshToken(token: string) {
   if (!token || typeof token !== "string") {
-    throw new Error("Refresh token inválido ou expirado.");
+    throw new AppError(401, "Refresh token inválido ou expirado.");
   }
 
   const userId = verifyRefreshToken(token);
@@ -270,11 +280,29 @@ export async function refreshToken(token: string) {
     await authRepository.consumeRefreshToken(tokenHash);
 
   if (!consumedToken) {
-    throw new Error("Refresh token inválido ou expirado.");
+    /*
+     * Detecção de REUSO (OWASP): se o JWT é válido mas o registro no
+     * banco já está revogado, algum token vazou e dois atores possuem
+     * a mesma credencial. Revogamos TODA a família do usuário —
+     * o legítimo será obrigado a logar de novo, mas o atacante
+     * também perde o acesso.
+     */
+    const existingToken =
+      await authRepository.findRefreshToken(tokenHash);
+
+    if (existingToken && existingToken.revoked) {
+      await authRepository.revokeRefreshTokensByUserId(userId);
+
+      logger.warn("Refresh token reutilizado — família revogada", {
+        userId,
+      });
+    }
+
+    throw new AppError(401, "Refresh token inválido ou expirado.");
   }
 
   if (consumedToken.userId !== userId) {
-    throw new Error("Refresh token inválido ou expirado.");
+    throw new AppError(401, "Refresh token inválido ou expirado.");
   }
 
   const accessToken = createAccessToken(userId);
@@ -298,7 +326,7 @@ export async function refreshToken(token: string) {
     };
 
     if (prismaError.code === "P2002") {
-      throw new Error("Não foi possível gerar refresh token.");
+      throw new AppError(500, "Não foi possível gerar refresh token.");
     }
 
     throw error;
@@ -318,6 +346,20 @@ export async function logout(token: string): Promise<void> {
   const tokenHash = hashToken(token);
 
   await authRepository.revokeRefreshToken(tokenHash);
+}
+
+export async function getProfile(userId: string) {
+  const user = await authRepository.findUserById(userId);
+
+  if (!user) {
+    throw new AppError(404, "Usuário não encontrado.");
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  };
 }
 
 export async function forgotPassword(email: string) {
@@ -379,9 +421,7 @@ export async function resetPassword(data: {
   password: string;
 }) {
   if (!data.token || !data.password) {
-    throw new Error(
-      "Token ou senha inválidos."
-    );
+    throw new AppError(400, "Token ou senha inválidos.");
   }
 
   /*
@@ -402,7 +442,8 @@ export async function resetPassword(data: {
     );
 
   if (!resetToken) {
-    throw new Error(
+    throw new AppError(
+      400,
       "Token de recuperação inválido ou expirado."
     );
   }
@@ -413,7 +454,8 @@ export async function resetPassword(data: {
     );
 
   if (!user) {
-    throw new Error(
+    throw new AppError(
+      400,
       "Token de recuperação inválido ou expirado."
     );
   }

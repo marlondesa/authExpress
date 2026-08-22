@@ -47,7 +47,8 @@ const auth = {
 
     // RESET PASSWORD
     resetPassword: async (token: string, newPassword: string) => {
-        const response = await api.post("/auth/reset-password", { token, newPassword });
+        // O backend espera o campo `password` (ver authSchema.ts)
+        const response = await api.post("/auth/reset-password", { token, password: newPassword });
         return response.data;
     },
 

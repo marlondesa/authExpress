@@ -19,7 +19,7 @@ export async function login(
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
+      path: "/api/auth",
     });
 
     return res.status(200).json({
@@ -74,7 +74,7 @@ export async function refreshToken(
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
+      path: "/api/auth",
     });
 
     return res.status(200).json({ accessToken: result.accessToken });
@@ -99,10 +99,24 @@ export async function logout(
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      path: "/",
+      path: "/api/auth",
     });
 
     return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function me(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = await authService.getProfile(req.userId as string);
+
+    return res.status(200).json({ user });
   } catch (error) {
     next(error);
   }
