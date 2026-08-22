@@ -59,7 +59,7 @@ Os principais riscos identificados são: **segredos fracos com fallback em códi
 
 ### A07 — Identification & Authentication Failures
 
-Além de A04-3 e A04-4 acima:
+Além de A04-3 e A04-4 acima::
 
 | # | Severidade | Achado | Local |
 |---|-----------|--------|-------|
