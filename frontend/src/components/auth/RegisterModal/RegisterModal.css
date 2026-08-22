@@ -1,1 +1,203 @@
-/* RegisterModal specific styles - todos os estilos compartilhados estão em Modal.css */
+/* =========================================
+   REGISTER MODAL
+   Cores e tokens vêm de src/styles/Global.css
+   ========================================= */
+
+.register-modal {
+  width: 100%;
+}
+
+/* FORMULÁRIO */
+.register-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* TÍTULO */
+.register-modal__title {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* LABEL */
+.register-modal__label {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* INPUTS (os campos de nome/e-mail/senha não usam classe;
+   o input do captcha usa .register-modal__input) */
+.register-modal__form input,
+.register-modal__input {
+  width: 100%;
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.register-modal__form input::placeholder,
+.register-modal__input::placeholder {
+  color: var(--text-muted);
+}
+
+.register-modal__form input:focus-visible,
+.register-modal__input:focus-visible {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* CAMPO DE SENHA COM TOGGLE */
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 44px;
+}
+
+.show-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.show-password-toggle:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+/* CAPTCHA */
+.register-modal__captcha {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.register-modal__captcha-image {
+  width: 180px;
+  height: 54px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.register-modal__captcha .register-modal__label {
+  align-self: flex-start;
+}
+
+.register-modal__captcha .register-modal__input {
+  width: 100%;
+}
+
+/* BOTÃO PRINCIPAL (submit sem classe dedicada) */
+.register-modal__form button[type="submit"] {
+  width: 100%;
+  height: 40px;
+  margin-top: 2px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.register-modal__form button[type="submit"]:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.register-modal__form button[type="submit"]:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.register-modal__form button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* LINK SECUNDÁRIO */
+.register-modal__login {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    text-decoration 0.2s ease;
+}
+
+.register-modal__login:hover {
+  color: var(--secondary-hover);
+  text-decoration: underline;
+}
+
+/* ALERTAS */
+.register-modal__alert {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.register-modal__alert--error {
+  border: 1px solid var(--error-border);
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.register-modal__alert--success {
+  border: 1px solid var(--success-border);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+  .register-modal__title {
+    font-size: 22px;
+  }
+}

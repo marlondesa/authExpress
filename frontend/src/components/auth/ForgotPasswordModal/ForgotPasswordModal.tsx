@@ -1,6 +1,5 @@
 import { useState } from "react";
 import auth from "../../../service/Auth";
-import "../Modal.css";
 import "./ForgotPasswordModal.css";
 
 

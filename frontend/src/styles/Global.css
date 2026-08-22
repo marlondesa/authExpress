@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   /* ==============================
      CORES PRINCIPAIS
@@ -42,9 +48,23 @@
      ============================== */
 
   --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --success-border: #BBF7D0;
+
   --warning: #F59E0B;
+
   --error: #DC2626;
+  --error-bg: #FEF2F2;
+  --error-border: #FECACA;
+
   --info: #2563EB;
+
+
+  /* ==============================
+     FOCO / ACESSIBILIDADE
+     ============================== */
+
+  --focus-ring: rgba(59, 130, 246, 0.25);
 
 
   /* ==============================

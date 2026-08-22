@@ -1,103 +1,126 @@
 import { Request, Response } from "express";
+import { randomInt } from "crypto";
+import { createCanvas } from "canvas";
 
 /**
- * Gera uma operação matemática simples (adição, subtração ou multiplicação)
- * e devolve a resposta esperada armazenada na sessão.
+ * Gera uma operação matemática simples (adição, subtração ou multiplicação).
+ * Os operandos usam crypto.randomInt (fonte criptográfica); a resposta nunca
+ * sai do servidor — fica apenas na sessão.
  */
 function generateMath(): { question: string; answer: number } {
-  // Agora usamos números de 0 a 9 (incluindo zero).
   const ops = ["+", "-", "×"];
-  const op = ops[Math.floor(Math.random() * ops.length)];
+  const op = ops[randomInt(ops.length)];
 
   let a: number;
   let b: number;
-  let answer: number;
-  let expr: string;
   switch (op) {
-    case "+":
-      a = Math.floor(Math.random() * 10); // 0‑9
-      b = Math.floor(Math.random() * 10);
-      answer = a + b;
-      expr = `${a} + ${b} = ?`;
-      break;
     case "-":
-      // gera b primeiro e garante a >= b para que o resultado nunca seja negativo
-      b = Math.floor(Math.random() * 10);
-      a = Math.floor(Math.random() * (10 - b)) + b; // a está no intervalo [b,9]
-      answer = a - b;
-      expr = `${a} - ${b} = ?`;
-      break;
+      // garante a >= b para que o resultado nunca seja negativo
+      b = randomInt(10);
+      a = randomInt(b, 10);
+      return { question: `${a} - ${b} = ?`, answer: a - b };
     case "×":
-      a = Math.floor(Math.random() * 10);
-      b = Math.floor(Math.random() * 10);
-      answer = a * b;
-      expr = `${a} × ${b} = ?`;
-      break;
+      a = randomInt(10);
+      b = randomInt(10);
+      return { question: `${a} × ${b} = ?`, answer: a * b };
     default:
-      a = Math.floor(Math.random() * 10);
-      b = Math.floor(Math.random() * 10);
-      answer = a + b;
-      expr = `${a} + ${b} = ?`;
+      a = randomInt(10);
+      b = randomInt(10);
+      return { question: `${a} + ${b} = ?`, answer: a + b };
   }
-  return { question: expr, answer };
 }
 
 /**
- * Renderiza o texto da operação em uma imagem PNG com ruído simples.
+ * Renderiza a expressão como PNG rasterizado (node-canvas).
+ *
+ * Cada caractere recebe rotação, tamanho, fonte e deslocamento vertical
+ * aleatórios; linhas de interferência cruzam o texto e pontos de ruído
+ * cobrem o fundo. O conteúdo da imagem contém somente pixels — a expressão
+ * não existe em texto em lugar nenhum da resposta.
  */
-// For simplicity, we return the question as plain text JSON instead of an image.
-/**
- * Converte a expressão de texto em uma imagem PNG (data‑uri) com ruído
- * simples. Cada chamada gera fundo, linhas e fonte aleatórios, dificultando
- * a criação de um dicionário estático de imagem → número.
- */
+
+const FONTS = ["sans-serif", "serif", "monospace", "Arial", "Georgia"];
+const MAX_ROTATION = 0.4; // ~±23°
+
 function renderToImage(question: string): { image: string } {
-  const width = 150;
-  const height = 50;
+  const width = 200;
+  const height = 60;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
 
-  // Cor de fundo aleatória (hsl) para dificultar mapeamento
-  const bgColor = `hsl(${Math.random() * 360}, 30%, 95%)`;
+  // --- Fundo: gradiente irregular com tons claros aleatórios ---
+  const hue = randomInt(360);
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, `hsl(${hue}, 30%, ${88 + randomInt(8)}%)`);
+  gradient.addColorStop(1, `hsl(${(hue + 40) % 360}, 25%, ${80 + randomInt(10)}%)`);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
 
-  // Escolha aleatória de fonte e tamanho
-  const fontSize = 24 + Math.floor(Math.random() * 6); // 24‑29px
-  const fonts = ["sans-serif", "Arial", "Courier New", "Georgia"];
-  const font = fonts[Math.floor(Math.random() * fonts.length)];
-
-  // Gerar linhas de ruído como <line> SVG
-  let noiseLines = "";
-  for (let i = 0; i < 5; i++) {
-    const x1 = Math.random() * width;
-    const y1 = Math.random() * height;
-    const x2 = Math.random() * width;
-    const y2 = Math.random() * height;
-    const opacity = Math.random() * 0.2;
-    noiseLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(0,0,0,${opacity})" stroke-width="1" />`;
+  // --- Pontos de ruído espalhados (antes do texto) ---
+  for (let i = 0; i < 120; i++) {
+    ctx.fillStyle = `hsla(${randomInt(360)}, 40%, ${30 + randomInt(50)}%, ${0.15 + Math.random() * 0.25})`;
+    ctx.fillRect(randomInt(width), randomInt(height), 1 + randomInt(2), 1 + randomInt(2));
   }
 
-  // Posicionamento aleatório do texto
-  const textX = 10 + Math.random() * 10;
-  const textY = height / 2 + (Math.random() - 0.5) * 6;
+  // --- Curvas de interferência sob o texto ---
+  const third = Math.floor(width / 3);
+  for (let i = 0; i < 3; i++) {
+    ctx.strokeStyle = `hsla(${randomInt(360)}, 50%, 40%, ${0.25 + Math.random() * 0.2})`;
+    ctx.lineWidth = 1 + Math.random();
+    ctx.beginPath();
+    ctx.moveTo(randomInt(third), randomInt(height));
+    ctx.bezierCurveTo(
+      randomInt(width), randomInt(height),
+      randomInt(width), randomInt(height),
+      width - randomInt(third), randomInt(height)
+    );
+    ctx.stroke();
+  }
 
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-  <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect width="${width}" height="${height}" fill="${bgColor}" />
-    ${noiseLines}
-    <text x="${textX}" y="${textY}" font-family="${font}" font-size="${fontSize}" fill="#222" dominant-baseline="middle">${question}</text>
-  </svg>`;
+  // --- Texto: caractere a caractere, com rotação/tamanho/fonte/posição variados ---
+  const chars = question.split("");
+  const charWidth = (width - 20) / chars.length;
 
-  // Encode SVG como data‑uri base64
-  const base64 = Buffer.from(svg).toString("base64");
-  return { image: `data:image/svg+xml;base64,${base64}` };
+  chars.forEach((char, index) => {
+    const fontSize = 26 + randomInt(8); // 26–33px
+    const font = FONTS[randomInt(FONTS.length)];
+    const rotation = (Math.random() - 0.5) * 2 * MAX_ROTATION;
+
+    const x = 10 + charWidth * index + charWidth / 2;
+    const y = height / 2 + (randomInt(17) - 8); // ±8px vertical
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.font = `${randomInt(2) ? "bold " : ""}${fontSize}px ${font}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = `hsl(${randomInt(360)}, 45%, ${15 + randomInt(20)}%)`;
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+  });
+
+  // --- Linhas de interferência POR CIMA do texto (obrigam segmentação) ---
+  for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = `hsla(${randomInt(360)}, 45%, ${25 + randomInt(30)}%, ${0.35 + Math.random() * 0.25})`;
+    ctx.lineWidth = 0.8 + Math.random() * 1.2;
+    ctx.beginPath();
+    ctx.moveTo(randomInt(width), randomInt(height));
+    ctx.lineTo(randomInt(width), randomInt(height));
+    ctx.stroke();
+  }
+
+  const base64 = canvas.toBuffer("image/png").toString("base64");
+  return { image: `data:image/png;base64,${base64}` };
 }
 
 /**
- * GET /api/math-captcha – gera a imagem e guarda a resposta na sessão.
+ * GET /api/math-captcha – gera a imagem PNG e guarda a resposta na sessão.
+ * Pedir um novo captcha invalida o anterior (a resposta da sessão é
+ * substituída antes do envio da nova imagem).
  */
 export const serveMathCaptcha = (req: Request, res: Response) => {
   const { question, answer } = generateMath();
-  // armazena a resposta (string) na sessão do usuário
-  // @ts-ignore – a sessão pode ter campos dinâmicos
   req.session.mathCaptchaAnswer = answer.toString();
-  const payload = renderToImage(question);
-  res.json(payload);
+  res.json(renderToImage(question));
 };

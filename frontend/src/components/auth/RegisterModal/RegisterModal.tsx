@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import auth from "../../../service/Auth";
-import "../Modal.css";
 import "./RegisterModal.css";
 
 
