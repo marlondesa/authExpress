@@ -1,4 +1,5 @@
 import * as authService from "./auth.service";
+import { AppError } from "../errors/AppError";
 import type { Request, Response, NextFunction } from "express";
 
 export async function login(
@@ -151,5 +152,38 @@ export async function resetPassword(
     return res.status(200).json({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     next(error);
+  }
+}
+
+
+// src/auth/auth.controller.ts (exemplo)
+export async function updateUser(
+  req: Request, res: Response, next: NextFunction
+) {
+  try {
+    const id = req.params.id as string | undefined;
+    const userIdFromToken = req.userId;               // vem do requireAuth
+    if (!id || userIdFromToken !== id) {
+      throw new AppError(403, "Você só pode alterar seu próprio usuário.");
+    }
+    const updated = await authService.updateUser(id, req.body);
+    return res.json({ user: updated });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteUser(
+  req: Request, res: Response, next: NextFunction
+) {
+  try {
+    const id = req.params.id as string | undefined;
+    if (!id || req.userId !== id) {
+      throw new AppError(403, "Você só pode excluir sua própria conta.");
+    }
+    await authService.deleteUser(id);
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
   }
 }

@@ -80,3 +80,17 @@ export const forgotPasswordSchema = z.object({
     .transform((value) => value.toLowerCase()),
 });
 
+/* ... schemas existentes (register, login, forgotPassword, resetPassword) ... */
+
+/**
+ * Schema for updating a user.
+ */
+export const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+});
+
+/**
+ * Schema for deleting a user.
+ */
+export const deleteUserSchema = z.object({});

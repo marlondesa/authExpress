@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import type { Role } from "@prisma/client";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
 function getAccessSecret(): string {
@@ -38,12 +39,14 @@ export function requireAuth(
       typeof payload !== "object" ||
       payload === null ||
       payload.type !== "access" ||
-      typeof payload.userId !== "string"
+      typeof payload.userId !== "string" ||
+      (payload.role !== "USER" && payload.role !== "ADMIN")
     ) {
       return res.status(401).json({ error: "Autenticação necessária." });
     }
 
     req.userId = payload.userId;
+    req.role = payload.role as Role;
     next();
   } catch {
     return res.status(401).json({ error: "Autenticação necessária." });

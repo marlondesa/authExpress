@@ -11,6 +11,12 @@ const prisma = new PrismaClient({
     }),
 });
 
+/*
+|--------------------------------------------------------------------------
+| Users
+|--------------------------------------------------------------------------
+*/
+
 export async function createUser(data: {
     name: string;
     email: string;
@@ -93,6 +99,7 @@ export async function revokeRefreshToken(token: string) {
         },
         data: {
             revoked: true,
+            revokedAt: new Date(),
         },
     });
 }
@@ -107,6 +114,7 @@ export async function revokeRefreshTokensByUserId(
         },
         data: {
             revoked: true,
+            revokedAt: new Date(),
         },
     });
 }
@@ -118,29 +126,33 @@ export async function revokeRefreshTokensByUserId(
 |
 | Operação atômica:
 |
-| token precisa existir
-| token não pode estar revogado
-| token não pode estar expirado
+| - token precisa existir
+| - token não pode estar revogado
+| - token não pode estar expirado
 |
 | Apenas uma requisição consegue consumir o token.
 |
 */
 
-export async function consumeRefreshToken(token: string) {
+export async function consumeRefreshToken(
+    token: string
+) {
     const now = new Date();
 
-    const result = await prisma.refreshToken.updateMany({
-        where: {
-            token,
-            revoked: false,
-            expiresAt: {
-                gt: now,
+    const result =
+        await prisma.refreshToken.updateMany({
+            where: {
+                token,
+                revoked: false,
+                expiresAt: {
+                    gt: now,
+                },
             },
-        },
-        data: {
-            revoked: true,
-        },
-    });
+            data: {
+                revoked: true,
+                revokedAt: now,
+            },
+        });
 
     if (result.count !== 1) {
         return null;
@@ -159,17 +171,21 @@ export async function consumeRefreshToken(token: string) {
 |--------------------------------------------------------------------------
 */
 
-export async function createPasswordResetToken(data: {
-    token: string;
-    userId: string;
-    expiresAt: Date;
-}) {
+export async function createPasswordResetToken(
+    data: {
+        token: string;
+        userId: string;
+        expiresAt: Date;
+    }
+) {
     return prisma.passwordResetToken.create({
         data,
     });
 }
 
-export async function findPasswordResetToken(token: string) {
+export async function findPasswordResetToken(
+    token: string
+) {
     return prisma.passwordResetToken.findUnique({
         where: {
             token,
@@ -221,7 +237,7 @@ export async function consumePasswordResetToken(
             },
         });
 
-    if (result.count !== 1) { 
+    if (result.count !== 1) {
         return null;
     }
 
@@ -282,12 +298,19 @@ export async function updatePasswordAndRevokeSessions(
             },
             data: {
                 revoked: true,
+                revokedAt: new Date(),
             },
         });
 
         return user;
     });
 }
+
+/*
+|--------------------------------------------------------------------------
+| Repository
+|--------------------------------------------------------------------------
+*/
 
 export const authRepository = {
     createUser,
